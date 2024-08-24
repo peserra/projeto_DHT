@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+service DhtOperations {
+
+}
+
+message Join {
+    uint32 id = 1;
+    string ip_addr = 2;
+    int32 port = 3;
+}
+
+// enviada pelo no em succ_port
+message Join_Ok {
+    uint32 id = 1;
+    string ip_addr = 2;
+    int32 succ_port = 3;
+    int32 pred_port = 4; // pred do no succ
+
+    repeated Transfer list_transfers = 5;
+}
+
+message Transfer {
+    string key = 1;
+    string value = 2;
+}
+
