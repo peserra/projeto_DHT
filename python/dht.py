@@ -1,5 +1,7 @@
 import dataclasses
 import grpc
+import dht_pb2
+import dht_pb2_grpc
 
 @dataclasses
 class Item:
@@ -63,3 +65,20 @@ class Node:
         pass
 
     pass
+
+# class DhtServer(dht_pb2.DhtOperations):
+#     def __init__(self) -> None:
+#         self.network: list[Node] = [Node]
+
+#     def join_network(self, request: dht_pb2.JOIN) -> dht_pb2.JOIN_OK:
+#         new_node = request
+#         self.network.append(new_node)
+
+#         if len(self.network) == 0:
+#             response = dht_pb2.JOIN_OK(new_node, None, None)
+#         elif len(self.network) == 1:
+#             predecessor = self.network[1]
+#             response = dht_pb2.JOIN_OK(new_node, predecessor, None)
+#         else:
+#             predecessor = self.network[-1]
+#             response = dht_pb2.JOIN_OK(new_node, predecessor, None)
