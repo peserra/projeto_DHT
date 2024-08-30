@@ -1,28 +1,36 @@
-import dataclasses
+from dataclasses import dataclass
 import grpc
 import dht_pb2
 import dht_pb2_grpc
 
-@dataclasses
+@dataclass
 class Item:
     # vai servir pra passar key : value pairs
-    key:str
+    key:int
     value:str
     pass
 
 
 class Node:
-    # vai ter funcionadlidade de server e client
-    def __init__(self) -> None:
-        self.id:str = ""
+    
+    def __init__(self, ip_addr:str, port:int) -> None:
+        self.id:str      = f"{ip_addr}:{port}" # gera um id aleatorio e coloca em formato de string
+        self.ip_addr:str = ip_addr
+        self.port:int    = port
         self.id_next:str = ""
         self.id_prev:str = ""
         self.stored_items:dict = {}
+    
 
+# classe que vai gerenciar a dht e nodes
+class Dht(dht_pb2_grpc.DhtOperations):
+    def __init__(self) -> None:
+        self.known_hosts:list = []
+    
     def calcHash(id:str) -> str:
         return id
     
-    def join(knowHostList:list):
+    def join(self, node:Node):
         '''
             - Usada no momento que quiser entrar na DHT
             - Recebe como param uma lista de nos conhecidos pela rede (pode ler de uma lista caso
@@ -37,9 +45,20 @@ class Node:
             
             - devem tambem ser transferidos do sucessor os dados que o no ingressante deverá cuidar (mensagem Transfer)
         '''
+        if not self.known_hosts:
+            print("nao tinha nenhum")
+            node.id_next = node.id
+            node.id_prev = node.id
+        else:
+            print("tinha algum")
+            existing_node:Node = self.known_hosts[0]
+            node.id_next = existing_node.id
+            existing_node.id_prev = node.id
+        
+        self.known_hosts.append(node)
         pass
 
-    def leave():
+    def leave(self, node:Node):
         '''
             - Usada para sair da rede
             
@@ -65,6 +84,9 @@ class Node:
         pass
 
     pass
+        
+    
+    pass
 
 # class DhtServer(dht_pb2.DhtOperations):
 #     def __init__(self) -> None:
@@ -82,3 +104,7 @@ class Node:
 #         else:
 #             predecessor = self.network[-1]
 #             response = dht_pb2.JOIN_OK(new_node, predecessor, None)
+
+
+def CreateDhtNode(ip_addr:str, port:int) -> Node:
+    return Node(ip_addr, port)

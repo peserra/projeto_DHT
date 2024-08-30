@@ -4,6 +4,10 @@ from typing import ClassVar as _ClassVar, Mapping as _Mapping, Optional as _Opti
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class VOID_PARAM(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
 class ADDRESS(_message.Message):
     __slots__ = ("ip_addr", "port")
     IP_ADDR_FIELD_NUMBER: _ClassVar[int]

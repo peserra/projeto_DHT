@@ -14,35 +14,37 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\tdht.proto\"(\n\x07\x41\x44\x44RESS\x12\x0f\n\x07ip_addr\x18\x01 \x01(\t\x12\x0c\n\x04port\x18\x02 \x01(\x05\"-\n\x04JOIN\x12\n\n\x02id\x18\x01 \x01(\r\x12\x19\n\x07\x61\x64\x64ress\x18\x02 \x01(\x0b\x32\x08.ADDRESS\"^\n\x07JOIN_OK\x12\x13\n\x04node\x18\x01 \x01(\x0b\x32\x05.JOIN\x12\x1e\n\x0csucc_address\x18\x03 \x01(\x0b\x32\x08.ADDRESS\x12\x1e\n\x0cpred_address\x18\x04 \x01(\x0b\x32\x08.ADDRESS\"&\n\x08TRANSFER\x12\x0b\n\x03key\x18\x01 \x01(\r\x12\r\n\x05value\x18\x02 \x01(\t\"$\n\x08NEW_NODE\x12\n\n\x02ip\x18\x01 \x01(\t\x12\x0c\n\x04port\x18\x02 \x01(\x05\"3\n\x05LEAVE\x12\n\n\x02id\x18\x01 \x01(\r\x12\x1e\n\x0cpred_address\x18\x02 \x01(\x0b\x32\x08.ADDRESS\";\n\tNODE_GONE\x12\n\n\x02id\x18\x01 \x01(\r\x12\"\n\x10new_succ_address\x18\x02 \x01(\x0b\x32\x08.ADDRESS\"#\n\x05STORE\x12\x0b\n\x03key\x18\x01 \x01(\r\x12\r\n\x05value\x18\x02 \x01(\x0c\"<\n\x08RETRIEVE\x12\x0b\n\x03key\x18\x01 \x01(\r\x12#\n\x11requester_address\x18\x02 \x01(\x0b\x32\x08.ADDRESS\"+\n\x02OK\x12\x0b\n\x03key\x18\x01 \x01(\r\x12\t\n\x01n\x18\x02 \x01(\x05\x12\r\n\x05value\x18\x03 \x01(\x0c\"\x0b\n\tNOT_FOUND2U\n\rDhtOperations\x12\x1f\n\x0cjoin_network\x12\x05.JOIN\x1a\x08.JOIN_OK\x12#\n\rleave_network\x12\x06.LEAVE\x1a\n.NODE_GONEb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\tdht.proto\"\x0c\n\nVOID_PARAM\"(\n\x07\x41\x44\x44RESS\x12\x0f\n\x07ip_addr\x18\x01 \x01(\t\x12\x0c\n\x04port\x18\x02 \x01(\x05\"-\n\x04JOIN\x12\n\n\x02id\x18\x01 \x01(\r\x12\x19\n\x07\x61\x64\x64ress\x18\x02 \x01(\x0b\x32\x08.ADDRESS\"^\n\x07JOIN_OK\x12\x13\n\x04node\x18\x01 \x01(\x0b\x32\x05.JOIN\x12\x1e\n\x0csucc_address\x18\x03 \x01(\x0b\x32\x08.ADDRESS\x12\x1e\n\x0cpred_address\x18\x04 \x01(\x0b\x32\x08.ADDRESS\"&\n\x08TRANSFER\x12\x0b\n\x03key\x18\x01 \x01(\r\x12\r\n\x05value\x18\x02 \x01(\t\"$\n\x08NEW_NODE\x12\n\n\x02ip\x18\x01 \x01(\t\x12\x0c\n\x04port\x18\x02 \x01(\x05\"3\n\x05LEAVE\x12\n\n\x02id\x18\x01 \x01(\r\x12\x1e\n\x0cpred_address\x18\x02 \x01(\x0b\x32\x08.ADDRESS\";\n\tNODE_GONE\x12\n\n\x02id\x18\x01 \x01(\r\x12\"\n\x10new_succ_address\x18\x02 \x01(\x0b\x32\x08.ADDRESS\"#\n\x05STORE\x12\x0b\n\x03key\x18\x01 \x01(\r\x12\r\n\x05value\x18\x02 \x01(\x0c\"<\n\x08RETRIEVE\x12\x0b\n\x03key\x18\x01 \x01(\r\x12#\n\x11requester_address\x18\x02 \x01(\x0b\x32\x08.ADDRESS\"+\n\x02OK\x12\x0b\n\x03key\x18\x01 \x01(\r\x12\t\n\x01n\x18\x02 \x01(\x05\x12\r\n\x05value\x18\x03 \x01(\x0c\"\x0b\n\tNOT_FOUND2U\n\rDhtOperations\x12\x1f\n\x0cjoin_network\x12\x05.JOIN\x1a\x08.JOIN_OK\x12#\n\rleave_network\x12\x06.LEAVE\x1a\n.NODE_GONEb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'dht_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_ADDRESS']._serialized_start=13
-  _globals['_ADDRESS']._serialized_end=53
-  _globals['_JOIN']._serialized_start=55
-  _globals['_JOIN']._serialized_end=100
-  _globals['_JOIN_OK']._serialized_start=102
-  _globals['_JOIN_OK']._serialized_end=196
-  _globals['_TRANSFER']._serialized_start=198
-  _globals['_TRANSFER']._serialized_end=236
-  _globals['_NEW_NODE']._serialized_start=238
-  _globals['_NEW_NODE']._serialized_end=274
-  _globals['_LEAVE']._serialized_start=276
-  _globals['_LEAVE']._serialized_end=327
-  _globals['_NODE_GONE']._serialized_start=329
-  _globals['_NODE_GONE']._serialized_end=388
-  _globals['_STORE']._serialized_start=390
-  _globals['_STORE']._serialized_end=425
-  _globals['_RETRIEVE']._serialized_start=427
-  _globals['_RETRIEVE']._serialized_end=487
-  _globals['_OK']._serialized_start=489
-  _globals['_OK']._serialized_end=532
-  _globals['_NOT_FOUND']._serialized_start=534
-  _globals['_NOT_FOUND']._serialized_end=545
-  _globals['_DHTOPERATIONS']._serialized_start=547
-  _globals['_DHTOPERATIONS']._serialized_end=632
+  _globals['_VOID_PARAM']._serialized_start=13
+  _globals['_VOID_PARAM']._serialized_end=25
+  _globals['_ADDRESS']._serialized_start=27
+  _globals['_ADDRESS']._serialized_end=67
+  _globals['_JOIN']._serialized_start=69
+  _globals['_JOIN']._serialized_end=114
+  _globals['_JOIN_OK']._serialized_start=116
+  _globals['_JOIN_OK']._serialized_end=210
+  _globals['_TRANSFER']._serialized_start=212
+  _globals['_TRANSFER']._serialized_end=250
+  _globals['_NEW_NODE']._serialized_start=252
+  _globals['_NEW_NODE']._serialized_end=288
+  _globals['_LEAVE']._serialized_start=290
+  _globals['_LEAVE']._serialized_end=341
+  _globals['_NODE_GONE']._serialized_start=343
+  _globals['_NODE_GONE']._serialized_end=402
+  _globals['_STORE']._serialized_start=404
+  _globals['_STORE']._serialized_end=439
+  _globals['_RETRIEVE']._serialized_start=441
+  _globals['_RETRIEVE']._serialized_end=501
+  _globals['_OK']._serialized_start=503
+  _globals['_OK']._serialized_end=546
+  _globals['_NOT_FOUND']._serialized_start=548
+  _globals['_NOT_FOUND']._serialized_end=559
+  _globals['_DHTOPERATIONS']._serialized_start=561
+  _globals['_DHTOPERATIONS']._serialized_end=646
 # @@protoc_insertion_point(module_scope)

@@ -5,6 +5,9 @@ service DhtOperations {
     rpc leave_network(LEAVE) returns (NODE_GONE);
 }
 
+
+message VOID_PARAM{}
+
 message ADDRESS {
     string ip_addr = 1;
     int32 port = 2;  
