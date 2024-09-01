@@ -14,9 +14,9 @@ def main():
         dht_instance.join(node = new_node)
     
     for node in dht_instance.known_hosts:
-        print(f"Node: {node.id} prev:{node.id_prev} succ:{node.id_next}")
+        print(f"Node id:{node.id} | Node prev: {node.id_prev} | Node next: {node.id_next} | Node hash: {node.id_hash}")
 
-    print(len(dht_instance.known_hosts))
+    #print(len(dht_instance.known_hosts))
     # host = hosts[0]
     # split_host = str.split(host, ":")
     # ip_addr , port = split_host

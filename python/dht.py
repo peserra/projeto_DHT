@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import grpc
 import dht_pb2
 import dht_pb2_grpc
+import hashlib
 
 @dataclass
 class Item:
@@ -12,15 +13,18 @@ class Item:
 
 
 class Node:
-    
     def __init__(self, ip_addr:str, port:int) -> None:
         self.id:str      = f"{ip_addr}:{port}" # gera um id aleatorio e coloca em formato de string
         self.ip_addr:str = ip_addr
         self.port:int    = port
-        self.id_next:str = ""
-        self.id_prev:str = ""
+        #self.id_hash = hashlib.sha256(self.id.encode(encoding="utf-8")).hexdigest()
+        self.id_hash = self.port # so para testar mesmo
+        # valor padrao de um novo node eh ser seu proprio next e prev, antes de entrar na dht
+        self.id_next:str = self.id 
+        self.id_prev:str = self.id
         self.stored_items:dict = {}
     
+        
 
 # classe que vai gerenciar a dht e nodes
 class Dht(dht_pb2_grpc.DhtOperations):
@@ -46,12 +50,16 @@ class Dht(dht_pb2_grpc.DhtOperations):
             - devem tambem ser transferidos do sucessor os dados que o no ingressante deverá cuidar (mensagem Transfer)
         '''
         if not self.known_hosts:
-            print("nao tinha nenhum")
-            node.id_next = node.id
-            node.id_prev = node.id
+            print("nao tinha nenhum, comecou nova dht")
         else:
-            print("tinha algum")
+            print("tinha dht, adicionando novo node")
+
+            # acha primeiro node com id maior que o node atual (vai ser trocado pelo hash depois)
+            #existing_next_node = next((n for n in self.known_hosts if n.id > node.id), None)
+            # aqui, manda uma mensagem grpc pra atualizar os nodes
+
             existing_node:Node = self.known_hosts[0]
+            
             node.id_next = existing_node.id
             existing_node.id_prev = node.id
         
