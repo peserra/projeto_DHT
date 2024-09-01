@@ -13,15 +13,15 @@ service DhtOperations {
     rpc SendJoiningPosition (JoinOk) returns (Void);
     
     // enviado para o predecessor do ingressante ajustar seu next
-    rpc AdjustPredecessor (NewNode) returns (Void);
+    rpc AdjustPredeJoin (NewNode) returns (Void);
 
     // LEAVING
 
     // enviado para o sucessor, para ajustar seu predecessor
-    rpc AdjustNext (Leave) returns (Void);
+    rpc AdjustNextLeave (Leave) returns (Void);
 
     // enviado para o predecessor, para ajustar seu next
-    rpc AdjustPred (NodeGone) returns (void);
+    rpc AdjustPredLeave (NodeGone) returns (void);
 }
 
 // ########################### SUPPORT MESSAGES #################################
