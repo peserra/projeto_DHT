@@ -1,64 +1,106 @@
 syntax = "proto3";
 
 service DhtOperations {
-    rpc join_network(JOIN) returns (JOIN_OK);
-    rpc leave_network(LEAVE) returns (NODE_GONE);
+    
+    //JOINING
+
+    // busca quem e o node que sera o sucessor do ingressante
+    // mensagem enviada por cada node ao seu sucessor
+    rpc FindNext (Join) returns (Void);
+
+    // enviado pelo node ao ingressante
+    rpc SendJoiningPosition (JoinOk) returns (Void);
+    
+    // enviado para o predecessor do ingressante ajustar seu next
+    rpc AdjustPredJoin (NewNode) returns (Void);
+
+    // LEAVING
+
+    // enviado para o sucessor, para ajustar seu predecessor
+    rpc AdjustNextLeave (Leave) returns (Void);
+
+    // enviado para o predecessor, para ajustar seu next
+    rpc AdjustPredLeave (NodeGone) returns (Void);
+
+
+    // GETTING ITEMS
+    rpc StoreItem (Store) returns (Void);
+
+    rpc RetrieveItem (Retrieve) returns (Void);
+
+    rpc SendItem (Ok) returns (Void);
+
+    rpc SendNotFound (NotFound) returns (Void);
+
+    // Transfering
+    // mensagens SAEM de um node e vao para outro
+    rpc TransferItems (stream Transfer) returns (Void);
+
 }
 
+// ########################### SUPPORT MESSAGES #################################
 
-message VOID_PARAM{}
+message Void {}
 
-message ADDRESS {
-    string ip_addr = 1;
-    int32 port = 2;  
+message NodeInfo {
+    string id = 1; // id de um node eh o hash de IP:PORT
+    string ip_addr = 2;
+    uint32 port = 3;
 }
 
-message JOIN {
-    string id = 1;
-    ADDRESS address = 2;
+//  ################################ JOINING  ###################################################
+
+// enviada pelo node que quer ingressar
+message Join {
+    NodeInfo joining_node = 1;
 }
 
-// enviada pelo no em succ_port
-message JOIN_OK {
-    JOIN node = 1;
-    ADDRESS succ_address = 3;
-    ADDRESS pred_address = 4;
+// enviada PARA o node que quer ingressar
+message JoinOk {
+    NodeInfo next_node = 1; // node que esta enviando esta mensagem
+    NodeInfo prev_node = 2; // atual predecessor deste node
 }
 
-message TRANSFER {
-    uint32 key = 1;
-    string value = 2;
+// enviada ao predecessor do node ingressante, apos receber o join_ok, para que este atualize seu sucessor
+message NewNode {
+    NodeInfo joining_node = 1;
 }
 
-message NEW_NODE {
-    string ip = 1;
-    int32 port = 2;
-  }
+// ##################################  LEAVING  ###############################################
 
-  message LEAVE {
-    uint32 id = 1;
-    ADDRESS pred_address = 2;
-  }
+// enviada por um node para seu sucessor, quando ele deseja sair da DHT
+message Leave {
+    NodeInfo leaving_node_pred = 1;
+}
 
-  message NODE_GONE {
-    uint32 id = 1;
-    ADDRESS new_succ_address = 2;
-  }
+// enviada pelo node saindo ao seu predecessor, para que ele ajuste seu sucessor 
+message NodeGone {
+    NodeInfo leaving_node_next = 1;
+}
 
-  message STORE {
-    uint32 key = 1;
-    bytes value = 2;
-  }
+// ################################### FUNCTIONALITIES #############################################
 
-  message RETRIEVE {
-    uint32 key = 1;
-    ADDRESS requester_address = 2;
-  }
-
-  message OK {
-    uint32 key = 1;
-    int32 n = 2;
+message Store {
+    string key = 1;
+    uint32 obj_size = 2;
     bytes value = 3;
-  }
+}
 
-  message NOT_FOUND {}
+message Retrieve {
+    string key = 1;
+    NodeInfo searching_node = 2;
+}
+
+// resposta enviada pelo retrieve no node responsavel
+message Ok {
+    string key = 1;
+    uint32 obj_size = 2;
+    bytes value = 3;
+}
+
+message NotFound {}
+
+message Transfer {
+    string key = 1;
+    bytes value = 2;
+}

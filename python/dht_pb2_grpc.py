@@ -5,7 +5,7 @@ import warnings
 
 import dht_pb2 as dht__pb2
 
-GRPC_GENERATED_VERSION = '1.65.4'
+GRPC_GENERATED_VERSION = '1.65.1'
 GRPC_VERSION = grpc.__version__
 EXPECTED_ERROR_RELEASE = '1.66.0'
 SCHEDULED_RELEASE_DATE = 'August 6, 2024'
@@ -39,29 +39,130 @@ class DhtOperationsStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.join_network = channel.unary_unary(
-                '/DhtOperations/join_network',
-                request_serializer=dht__pb2.JOIN.SerializeToString,
-                response_deserializer=dht__pb2.JOIN_OK.FromString,
+        self.FindNext = channel.unary_unary(
+                '/DhtOperations/FindNext',
+                request_serializer=dht__pb2.Join.SerializeToString,
+                response_deserializer=dht__pb2.Void.FromString,
                 _registered_method=True)
-        self.leave_network = channel.unary_unary(
-                '/DhtOperations/leave_network',
-                request_serializer=dht__pb2.LEAVE.SerializeToString,
-                response_deserializer=dht__pb2.NODE_GONE.FromString,
+        self.SendJoiningPosition = channel.unary_unary(
+                '/DhtOperations/SendJoiningPosition',
+                request_serializer=dht__pb2.JoinOk.SerializeToString,
+                response_deserializer=dht__pb2.Void.FromString,
+                _registered_method=True)
+        self.AdjustPredJoin = channel.unary_unary(
+                '/DhtOperations/AdjustPredJoin',
+                request_serializer=dht__pb2.NewNode.SerializeToString,
+                response_deserializer=dht__pb2.Void.FromString,
+                _registered_method=True)
+        self.AdjustNextLeave = channel.unary_unary(
+                '/DhtOperations/AdjustNextLeave',
+                request_serializer=dht__pb2.Leave.SerializeToString,
+                response_deserializer=dht__pb2.Void.FromString,
+                _registered_method=True)
+        self.AdjustPredLeave = channel.unary_unary(
+                '/DhtOperations/AdjustPredLeave',
+                request_serializer=dht__pb2.NodeGone.SerializeToString,
+                response_deserializer=dht__pb2.Void.FromString,
+                _registered_method=True)
+        self.StoreItem = channel.unary_unary(
+                '/DhtOperations/StoreItem',
+                request_serializer=dht__pb2.Store.SerializeToString,
+                response_deserializer=dht__pb2.Void.FromString,
+                _registered_method=True)
+        self.RetrieveItem = channel.unary_unary(
+                '/DhtOperations/RetrieveItem',
+                request_serializer=dht__pb2.Retrieve.SerializeToString,
+                response_deserializer=dht__pb2.Void.FromString,
+                _registered_method=True)
+        self.SendItem = channel.unary_unary(
+                '/DhtOperations/SendItem',
+                request_serializer=dht__pb2.Ok.SerializeToString,
+                response_deserializer=dht__pb2.Void.FromString,
+                _registered_method=True)
+        self.SendNotFound = channel.unary_unary(
+                '/DhtOperations/SendNotFound',
+                request_serializer=dht__pb2.NotFound.SerializeToString,
+                response_deserializer=dht__pb2.Void.FromString,
+                _registered_method=True)
+        self.TransferItems = channel.stream_unary(
+                '/DhtOperations/TransferItems',
+                request_serializer=dht__pb2.Transfer.SerializeToString,
+                response_deserializer=dht__pb2.Void.FromString,
                 _registered_method=True)
 
 
 class DhtOperationsServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def join_network(self, request, context):
+    def FindNext(self, request, context):
+        """JOINING
+
+        busca quem e o node que sera o sucessor do ingressante
+        mensagem enviada por cada node ao seu sucessor
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SendJoiningPosition(self, request, context):
+        """enviado pelo node ao ingressante
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def AdjustPredJoin(self, request, context):
+        """enviado para o predecessor do ingressante ajustar seu next
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def AdjustNextLeave(self, request, context):
+        """LEAVING
+
+        enviado para o sucessor, para ajustar seu predecessor
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def AdjustPredLeave(self, request, context):
+        """enviado para o predecessor, para ajustar seu next
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def StoreItem(self, request, context):
+        """GETTING ITEMS
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RetrieveItem(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def leave_network(self, request, context):
+    def SendItem(self, request, context):
         """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SendNotFound(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def TransferItems(self, request_iterator, context):
+        """Transfering
+        mensagens SAEM de um node e vao para outro
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -69,15 +170,55 @@ class DhtOperationsServicer(object):
 
 def add_DhtOperationsServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'join_network': grpc.unary_unary_rpc_method_handler(
-                    servicer.join_network,
-                    request_deserializer=dht__pb2.JOIN.FromString,
-                    response_serializer=dht__pb2.JOIN_OK.SerializeToString,
+            'FindNext': grpc.unary_unary_rpc_method_handler(
+                    servicer.FindNext,
+                    request_deserializer=dht__pb2.Join.FromString,
+                    response_serializer=dht__pb2.Void.SerializeToString,
             ),
-            'leave_network': grpc.unary_unary_rpc_method_handler(
-                    servicer.leave_network,
-                    request_deserializer=dht__pb2.LEAVE.FromString,
-                    response_serializer=dht__pb2.NODE_GONE.SerializeToString,
+            'SendJoiningPosition': grpc.unary_unary_rpc_method_handler(
+                    servicer.SendJoiningPosition,
+                    request_deserializer=dht__pb2.JoinOk.FromString,
+                    response_serializer=dht__pb2.Void.SerializeToString,
+            ),
+            'AdjustPredJoin': grpc.unary_unary_rpc_method_handler(
+                    servicer.AdjustPredJoin,
+                    request_deserializer=dht__pb2.NewNode.FromString,
+                    response_serializer=dht__pb2.Void.SerializeToString,
+            ),
+            'AdjustNextLeave': grpc.unary_unary_rpc_method_handler(
+                    servicer.AdjustNextLeave,
+                    request_deserializer=dht__pb2.Leave.FromString,
+                    response_serializer=dht__pb2.Void.SerializeToString,
+            ),
+            'AdjustPredLeave': grpc.unary_unary_rpc_method_handler(
+                    servicer.AdjustPredLeave,
+                    request_deserializer=dht__pb2.NodeGone.FromString,
+                    response_serializer=dht__pb2.Void.SerializeToString,
+            ),
+            'StoreItem': grpc.unary_unary_rpc_method_handler(
+                    servicer.StoreItem,
+                    request_deserializer=dht__pb2.Store.FromString,
+                    response_serializer=dht__pb2.Void.SerializeToString,
+            ),
+            'RetrieveItem': grpc.unary_unary_rpc_method_handler(
+                    servicer.RetrieveItem,
+                    request_deserializer=dht__pb2.Retrieve.FromString,
+                    response_serializer=dht__pb2.Void.SerializeToString,
+            ),
+            'SendItem': grpc.unary_unary_rpc_method_handler(
+                    servicer.SendItem,
+                    request_deserializer=dht__pb2.Ok.FromString,
+                    response_serializer=dht__pb2.Void.SerializeToString,
+            ),
+            'SendNotFound': grpc.unary_unary_rpc_method_handler(
+                    servicer.SendNotFound,
+                    request_deserializer=dht__pb2.NotFound.FromString,
+                    response_serializer=dht__pb2.Void.SerializeToString,
+            ),
+            'TransferItems': grpc.stream_unary_rpc_method_handler(
+                    servicer.TransferItems,
+                    request_deserializer=dht__pb2.Transfer.FromString,
+                    response_serializer=dht__pb2.Void.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -91,7 +232,7 @@ class DhtOperations(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def join_network(request,
+    def FindNext(request,
             target,
             options=(),
             channel_credentials=None,
@@ -104,9 +245,9 @@ class DhtOperations(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/DhtOperations/join_network',
-            dht__pb2.JOIN.SerializeToString,
-            dht__pb2.JOIN_OK.FromString,
+            '/DhtOperations/FindNext',
+            dht__pb2.Join.SerializeToString,
+            dht__pb2.Void.FromString,
             options,
             channel_credentials,
             insecure,
@@ -118,7 +259,7 @@ class DhtOperations(object):
             _registered_method=True)
 
     @staticmethod
-    def leave_network(request,
+    def SendJoiningPosition(request,
             target,
             options=(),
             channel_credentials=None,
@@ -131,9 +272,225 @@ class DhtOperations(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/DhtOperations/leave_network',
-            dht__pb2.LEAVE.SerializeToString,
-            dht__pb2.NODE_GONE.FromString,
+            '/DhtOperations/SendJoiningPosition',
+            dht__pb2.JoinOk.SerializeToString,
+            dht__pb2.Void.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AdjustPredJoin(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/DhtOperations/AdjustPredJoin',
+            dht__pb2.NewNode.SerializeToString,
+            dht__pb2.Void.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AdjustNextLeave(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/DhtOperations/AdjustNextLeave',
+            dht__pb2.Leave.SerializeToString,
+            dht__pb2.Void.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AdjustPredLeave(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/DhtOperations/AdjustPredLeave',
+            dht__pb2.NodeGone.SerializeToString,
+            dht__pb2.Void.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def StoreItem(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/DhtOperations/StoreItem',
+            dht__pb2.Store.SerializeToString,
+            dht__pb2.Void.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RetrieveItem(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/DhtOperations/RetrieveItem',
+            dht__pb2.Retrieve.SerializeToString,
+            dht__pb2.Void.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SendItem(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/DhtOperations/SendItem',
+            dht__pb2.Ok.SerializeToString,
+            dht__pb2.Void.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SendNotFound(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/DhtOperations/SendNotFound',
+            dht__pb2.NotFound.SerializeToString,
+            dht__pb2.Void.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def TransferItems(request_iterator,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.stream_unary(
+            request_iterator,
+            target,
+            '/DhtOperations/TransferItems',
+            dht__pb2.Transfer.SerializeToString,
+            dht__pb2.Void.FromString,
             options,
             channel_credentials,
             insecure,

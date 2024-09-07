@@ -1,20 +1,24 @@
-import dht
+import DHT_lib as DHT
+import asyncio
 
 
-def main():
-    with open("../lista_hosts_dht.txt", 'r+') as known_hosts:
-        hosts = known_hosts.readlines()
+async def main():
     
-    dht_instance = dht.Dht()
-
-    for host in hosts:
-        host = str(host).replace('\n', '')
-        host_ip, host_port = host.split(':')
-        new_node = dht.CreateDhtNode(host_ip, int(host_port))
-        dht_instance.join(node = new_node)
+    dht_instance = DHT.DhtManager()
     
-    for node in dht_instance.known_hosts:
-        print(f"Node id:{node.id} | Node prev: {node.id_prev} | Node next: {node.id_next} | Node hash: {node.id_hash}")
+    node_init = DHT.CreateDhtNode(ip_addr="0.0.0.0", port=1234)
+    print("criado node de inicio da dht")
+
+    t1 = asyncio.create_task(dht_instance.join(node=node_init))
+
+    await t1
+
+    node2 = DHT.CreateDhtNode(ip_addr="0.0.0.1", port=1234)
+    t2 = asyncio.create_task(dht_instance.join(node=node2))
+    await t2
+    print("apos o join")
+
+    
 
     #print(len(dht_instance.known_hosts))
     # host = hosts[0]
@@ -37,4 +41,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
