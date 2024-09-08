@@ -105,22 +105,81 @@ class DhtManager(dht_pb2_grpc.DhtOperationsServicer):
         '''
         pass
 
-    def store(self, key:str ,value:str):
+    def _is_responsible_for_key(self, node: Node, key_hash: str) -> bool:
+        '''
+        Verifica se o nó é responsável por armazenar a chave com o hash fornecido.
+        '''
+        # O nó é responsável se o hash da chave estiver entre o ID do nó atual e o ID do seu próximo nó
+        if node.id_hash < key_hash <= node.id_next:
+            return True
+        elif node.id_hash > node.id_next:  # Quando o ID atual é maior que o próximo (final da faixa circular)
+            return key_hash > node.id_hash or key_hash <= node.id_next
+        return False
+
+    def store(self, item: Item):
         '''
             - Armazena o 'value' utilziando a 'key' no dicionario stored_items do no
 
             - o item deve ser armazenado no no responsavel pelo intervalo que contem valor 
             calcHash(key)
         '''
-        pass
+        # Calcula o hash da chave
+        # key_hash = hashlib.sha256(item.key.encode(encoding="utf-8")).hexdigest()
+        key_hash = str(self.port) # so para testar mesmo
+
+        # Obtém o nó atual
+        current_node = self.known_hosts[-1]
+
+        # Verifica se o nó atual é responsável pelo intervalo da chave
+        if self._is_responsible_for_key(current_node, key_hash):
+            # Armazena o item localmente
+            print(f"Armazenando chave {item.key} no nó {current_node.id}")
+            current_node.stored_items[item.key] = item.value
+        else:
+            # Caso contrário, passa a solicitação ao próximo nó
+            print(f"Encaminhando chave {item.key} para o próximo nó")
+            next_node_stub = current_node.init_node_stub(current_node.id_next)
+            next_node_stub.StoreItem(dht_pb2.Store(key=item.key, obj_size=len(item.value), value=item.value.encode()))
+
 
     def retrieve(self, key:str):
         '''
             - Busca a 'key' na DHT e retorna seu valor, caso presente na DHT
         '''
-        pass
+            # Calcula o hash da chave
+        key_hash = hashlib.sha256(key.encode(encoding="utf-8")).hexdigest()
 
-    pass
+        # Obtém o nó atual
+        current_node = self.known_hosts[-1]
+
+        # Verifica se o nó atual é responsável pelo intervalo da chave
+        if self._is_responsible_for_key(current_node, key_hash):
+            # Verifica se a chave existe no nó
+            if key in current_node.stored_items:
+                # Retorna o valor armazenado
+                value = current_node.stored_items[key]
+                print(f"Chave {key} encontrada no nó {current_node.id}. Valor: {value}")
+                return value
+            else:
+                # Se a chave não for encontrada, envia uma mensagem de NotFound
+                print(f"Chave {key} não encontrada no nó {current_node.id}")
+                return None  # ou lança uma exceção, dependendo do caso
+        else:
+            # Encaminha a solicitação para o próximo nó
+            print(f"Encaminhando solicitação da chave {key} para o próximo nó")
+            next_node_stub = current_node.init_node_stub(current_node.id_next)
+            response = next_node_stub.RetrieveItem(dht_pb2.Retrieve(key=key, searching_node=dht_pb2.NodeInfo(
+                id=current_node.id_hash, ip_addr=current_node.ip_addr, port=current_node.port)))
+            
+            if response.HasField("Ok"):
+                # Retorna o valor recebido da resposta
+                return response.value.decode()
+            else:
+                print(f"Chave {key} não encontrada em toda a DHT")
+                return None
+
+            
+
         
     
 
