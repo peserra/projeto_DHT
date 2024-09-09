@@ -6,14 +6,14 @@ async def main():
     
     dht_instance = DHT.DhtManager()
     
-    node_init = DHT.CreateDhtNode(ip_addr="0.0.0.0", port=1234)
+    node_init = DHT.CreateDhtNode(ip_addr="127.0.0.1", port=1234)
     print("criado node de inicio da dht")
 
     t1 = asyncio.create_task(dht_instance.join(node=node_init))
 
     await t1
 
-    node2 = DHT.CreateDhtNode(ip_addr="0.0.0.1", port=1234)
+    node2 = DHT.CreateDhtNode(ip_addr="127.0.0.1", port=1235)
     t2 = asyncio.create_task(dht_instance.join(node=node2))
     await t2
     print("apos o join")

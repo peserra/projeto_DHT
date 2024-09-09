@@ -7,6 +7,7 @@ from concurrent import futures
 import time
 import threading
 import asyncio
+import traceback
 
 @dataclass
 class Item:
@@ -21,7 +22,7 @@ class DhtManager(dht_pb2_grpc.DhtOperationsServicer):
     
     class Node:
         def __init__(self, ip_addr:str, port:int) -> None:
-            self.id:str      = f"{ip_addr}:{port}" # gera um id aleatorio e coloca em formato de string
+            self.id:str      = f"{ip_addr}:{port}" 
             self.ip_addr:str = ip_addr
             self.port:int    = port
             #self.id_hash:str = hashlib.sha256(self.id.encode(encoding="utf-8")).hexdigest()
@@ -30,13 +31,15 @@ class DhtManager(dht_pb2_grpc.DhtOperationsServicer):
             self.id_next:str = self.id 
             self.id_prev:str = self.id
             self.stored_items:dict = {}
+            self.ready_event = asyncio.Event()
         
         # quero estabelecer a conexao com o primeiro node da lista de nodes conhecidos
-        def init_node_stub(self, node_id:str) -> dht_pb2_grpc.DhtOperationsStub:
+        async def init_node_stub(self, node_id:str):
             # cria uma conexao com o seu next para mandar a mensagem pra ele
-            with grpc.insecure_channel(node_id) as channel:
-                node_stub = dht_pb2_grpc.DhtOperationsStub(channel)
-                return node_stub
+            channel = grpc.insecure_channel(node_id)
+            node_stub = dht_pb2_grpc.DhtOperationsStub(channel)
+            print(f"stub criado no canal {node_id}")
+            return node_stub
             
         # inicializa um listener do node, com seu proprio id que escuta por 5s
         async def init_node_listening(self):
@@ -47,7 +50,11 @@ class DhtManager(dht_pb2_grpc.DhtOperationsServicer):
             server.add_insecure_port("[::]:" + port)
             server.start()
             print(f"node {self.id} ouvindo: {port}")
-            server.wait_for_termination(timeout=5)
+            self.ready_event.set()
+            try:
+                await server.wait_for_termination()
+            except asyncio.CancelledError:
+                print(f"listener de {self.id} fechado")
 
     
     '''
@@ -58,39 +65,43 @@ class DhtManager(dht_pb2_grpc.DhtOperationsServicer):
         return super().FindNext(request, context)
     
     
-    async def join(self, node:Node):
-        '''
-            - Usada no momento que quiser entrar na DHT
-            - Recebe como param uma lista de nos conhecidos pela rede (pode ler de uma lista caso
-              seja primeiro)
-            - caso nao consiga encontar ninguem participando, ele é o primeiro
-            
+    '''
+        - Usada no momento que quiser entrar na DHT
+        - Recebe como param uma lista de nos conhecidos pela rede (pode ler de uma lista caso
+            seja primeiro)
+        - caso nao consiga encontar ninguem participando, ele é o primeiro
+        
 
-            - ao fim dessa funcao, devem ter sido atualizados:
-                * os campos id_next e id_prev do no ingressante
-                * o campo id_prev do sucessor do no ingressante
-                * o campo id_next do predecessor do ingressante
-            
-            - devem tambem ser transferidos do sucessor os dados que o no ingressante deverá cuidar (mensagem Transfer)
-        '''
-        if  self.known_hosts:
+        - ao fim dessa funcao, devem ter sido atualizados:
+            * os campos id_next e id_prev do no ingressante
+            * o campo id_prev do sucessor do no ingressante
+            * o campo id_next do predecessor do ingressante
+        
+        - devem tambem ser transferidos do sucessor os dados que o no ingressante deverá cuidar (mensagem Transfer)
+    '''
+    async def join(self, node:Node):
+        if self.known_hosts:
             print("tinha dht, adicionando novo node")
             
             entry_node = self.known_hosts[0]
             # funcao de server do node vai ficar ouvindo por conexao
+            # esta ouvindo em "localhost:1234"
             t = asyncio.create_task(entry_node.init_node_listening())
-            
+            await entry_node.ready_event.wait()
             print("thread main")
-            print(entry_node.id)
-            node_stub = node.init_node_stub(node_id=entry_node.id)
-            node_stub.FindNext(dht_pb2.Join(joining_node=dht_pb2.NodeInfo(id=node.id_hash,
+            try:
+                if len(self.known_hosts) == 1:
+                    # proximo eh sempre o primeiro node
+                    print(entry_node.id)
+                    # cria um stub que esta tentando se conectar com localhost:1234
+                    node_stub = await node.init_node_stub(node_id=entry_node.id)
+                    print("RETORNOU O STUB")
+                    node_stub.FindNext(dht_pb2.Join(joining_node=dht_pb2.NodeInfo(id=node.id_hash,
                                                                            ip_addr=node.ip_addr, port=node.port)))
-            await t
-            if len(self.known_hosts) == 1:
-                # node ingressante escuta
-                node.init_node_listening()
-
-                # 
+                    
+            except Exception as e:
+                print(f"Erro ao chamar a funcao FindNext: {e}")
+                traceback.print_exc()  # Mostra o stack trace completo para ajudar a identificar o problema
         
         # adiciona na lista de hosts conhecidos da dht
         self.known_hosts.append(node)
@@ -125,7 +136,7 @@ class DhtManager(dht_pb2_grpc.DhtOperationsServicer):
         '''
         # Calcula o hash da chave
         # key_hash = hashlib.sha256(item.key.encode(encoding="utf-8")).hexdigest()
-        key_hash = str(self.port) # so para testar mesmo
+        key_hash = str(item.key) # so para testar mesmo
 
         # Obtém o nó atual
         current_node = self.known_hosts[-1]
