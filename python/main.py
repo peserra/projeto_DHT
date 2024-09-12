@@ -16,49 +16,61 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
         self.ip_addr:str = "127.0.0.1"
         self.porta:int   = port
         self.id:str      = f"{self.ip_addr}:{port}"
-        self.id_hash:str = hashlib.sha256(self.id.encode(encoding="utf-8")).hexdigest()
+        self.id_hash:str = self.calc_hash_id(self.id)
         self.id_next:str = self.id 
         self.id_prev:str = self.id
         self.stored_items:dict = {}
         self.messages_queue = queue.Queue(maxsize=10)
         self.join()  
 
-    def FindNext(self, request, context):
-        # sou o lugar certo para inserir o node ?
-        sou_lugar_certo = True
-        if sou_lugar_certo:
+    def FindNext(self, request, context) -> None:
+        if self.is_correct_place(request.id):
             prev_ip, prev_port = self.id_prev.split(':')
-            with grpc.insecure_channel(request.id) as channel:
+            with grpc.insecure_channel(request.joining_node.id) as channel:
                 insertion_stub = dht_pb2_grpc.DhtOperationsStub(channel)
-                _ = insertion_stub.SendJoiningPosition(dht_pb2.JoinOk(
-                    next_node=dht_pb2.NodeInfo(
-                        id=self.id_hash,
-                        ip_addr=self.ip_addr, 
-                        port=self.port)
-                    ),
-                    prev_node = dht_pb2.NodeInfo(
-                        id= hashlib.sha256(self.id_prev.encode(encoding="utf-8")).hexdigest(),
-                        ip_addr=prev_ip,
-                        port=prev_port
-                    )
+                _ = insertion_stub.SendJoiningPosition(
+                    dht_pb2.JoinOk(
+                        next_node=dht_pb2.NodeInfo(
+                            id=self.id_hash,
+                            ip_addr=self.ip_addr, 
+                            port=self.port)
+                        ),
+                        prev_node = dht_pb2.NodeInfo(
+                            id = self.calc_hash_id(self.id_prev),
+                            ip_addr = prev_ip,
+                            port = prev_port
+                        )
                 )
         else:
             with grpc.insecure_channel(self.id_next) as channel:
                 joining_stub = dht_pb2_grpc.DhtOperationsStub(channel)
-                _ = joining_stub.FindNext(dht_pb2.Join(
-                    joining_node=dht_pb2.NodeInfo(
-                        id=request.id,
-                        ip_addr=request.ip_addr, 
-                        port=request.port)
-                    )
+                _ = joining_stub.FindNext(
+                    dht_pb2.Join(
+                        joining_node=dht_pb2.NodeInfo(
+                            id = request.joining_node.id,
+                            ip_addr = request.joining_node.ip_addr, 
+                            port = request.joining_node.port)
+                        )
                 )
 
-        #sim {cria um stub, manda mensagem JoinOK para o solicitado, fecha stub}
-        # nao {cria stub, manda mensagem findnext para meu proximo}
-        return super().FindNext(request, context)
-    
+    '''
+        node que recebe isso:
+          * atualiza seu prev e seu next
+          * manda mensagem transfer, para receber os itens que vai tomar conta
+    '''
     def SendJoiningPosition(self, request, context):
-        return super().SendJoiningPosition(request, context)
+        next_grpc = request.next_node
+        prev_grpc = request.prev_node
+
+        self.id_next = f"{next_grpc.ip_addr}:{str(next_grpc.port)}"
+        self.id_prev = f"{prev_grpc.ip_addr}:{str(prev_grpc.port)}"
+
+        print("recebi joinOK, meu proximo e anterior sao:")
+        print(self.id_next)
+        print(self.id_prev)
+
+         
+
 
     def AdjustPredJoin(self, request, context):
         return super().AdjustPredJoin(request, context)
@@ -81,9 +93,22 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
     def SendNotFound(self, request, context):
         return super().SendNotFound(request, context)
     
-    def TransferItems(self, request_iterator, context):
-        return super().TransferItems(request_iterator, context)
+    def calc_hash_id(id:str):
+        return hashlib.sha256(id.encode(encoding="utf-8")).hexdigest()
     
+    
+    def is_correct_place(self, id_hash_inc:str) -> bool:
+        # hash que quer entrar eh maior do que eu? false
+        if id_hash_inc > self.id_hash:
+            return False
+
+        # sou o ultimo do anel e hash que quer entrar maior que eu? false
+        if self.calc_hash_id(self.id_next) < self.id_hash and id_hash_inc > self.id_hash:
+            return False
+
+        return True
+
+
     def is_responsible_for_key(self, key_hash: str) -> bool:
         '''
         Verifica se o nó é responsável por armazenar a chave com o hash fornecido.
