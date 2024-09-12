@@ -89,6 +89,7 @@ async def main():
     print("Saindo da DHT...")
     await dht_instance.leave(node=node_init)
     print("Nó saiu da DHT.")
+    print("teste")
     
 if __name__ == "__main__":
     asyncio.run(main())
