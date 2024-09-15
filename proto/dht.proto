@@ -34,7 +34,7 @@ service DhtOperations {
 
     // Transfering
     // mensagens SAEM de um node e vao para outro
-    rpc TransferItems (stream Transfer) returns (Void);
+    rpc TransferItems (Void) returns (stream Transfer);
 
 }
 

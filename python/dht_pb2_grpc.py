@@ -5,7 +5,7 @@ import warnings
 
 import dht_pb2 as dht__pb2
 
-GRPC_GENERATED_VERSION = '1.65.1'
+GRPC_GENERATED_VERSION = '1.65.4'
 GRPC_VERSION = grpc.__version__
 EXPECTED_ERROR_RELEASE = '1.66.0'
 SCHEDULED_RELEASE_DATE = 'August 6, 2024'
@@ -84,10 +84,10 @@ class DhtOperationsStub(object):
                 request_serializer=dht__pb2.NotFound.SerializeToString,
                 response_deserializer=dht__pb2.Void.FromString,
                 _registered_method=True)
-        self.TransferItems = channel.stream_unary(
+        self.TransferItems = channel.unary_stream(
                 '/DhtOperations/TransferItems',
-                request_serializer=dht__pb2.Transfer.SerializeToString,
-                response_deserializer=dht__pb2.Void.FromString,
+                request_serializer=dht__pb2.Void.SerializeToString,
+                response_deserializer=dht__pb2.Transfer.FromString,
                 _registered_method=True)
 
 
@@ -159,7 +159,7 @@ class DhtOperationsServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def TransferItems(self, request_iterator, context):
+    def TransferItems(self, request, context):
         """Transfering
         mensagens SAEM de um node e vao para outro
         """
@@ -215,10 +215,10 @@ def add_DhtOperationsServicer_to_server(servicer, server):
                     request_deserializer=dht__pb2.NotFound.FromString,
                     response_serializer=dht__pb2.Void.SerializeToString,
             ),
-            'TransferItems': grpc.stream_unary_rpc_method_handler(
+            'TransferItems': grpc.unary_stream_rpc_method_handler(
                     servicer.TransferItems,
-                    request_deserializer=dht__pb2.Transfer.FromString,
-                    response_serializer=dht__pb2.Void.SerializeToString,
+                    request_deserializer=dht__pb2.Void.FromString,
+                    response_serializer=dht__pb2.Transfer.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -475,7 +475,7 @@ class DhtOperations(object):
             _registered_method=True)
 
     @staticmethod
-    def TransferItems(request_iterator,
+    def TransferItems(request,
             target,
             options=(),
             channel_credentials=None,
@@ -485,12 +485,12 @@ class DhtOperations(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.stream_unary(
-            request_iterator,
+        return grpc.experimental.unary_stream(
+            request,
             target,
             '/DhtOperations/TransferItems',
-            dht__pb2.Transfer.SerializeToString,
-            dht__pb2.Void.FromString,
+            dht__pb2.Void.SerializeToString,
+            dht__pb2.Transfer.FromString,
             options,
             channel_credentials,
             insecure,
