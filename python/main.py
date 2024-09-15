@@ -68,6 +68,9 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
         print("recebi joinOK, meu proximo e anterior sao:")
         print(self.id_next)
         print(self.id_prev)
+        
+        # manda transfer pra receber todos os arquivos que tem que tomar conta
+        with grpc.insecure_channel(self.id_next) as channel:
 
          
 
