@@ -9,6 +9,12 @@ import traceback
 import sys
 import queue
 
+@dataclass
+class Item:
+    # vai servir pra passar key : value pairs
+    key:str
+    value:str
+
 class Node(dht_pb2_grpc.DhtOperationsServicer):
     def __init__(self, port:int) -> None:
         self.ip_addr:str = "127.0.0.1"
@@ -169,8 +175,26 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
         new_next_port = request.leaving_node_next.port 
         self.id_prev = f"{new_next_ip}:{str(new_next_port)}"
     
-    def StoreItem(self, request, context):
-        return super().StoreItem(request, context)
+    def StoreItem(self, request:dht_pb2.Store, context) -> None:
+        req:tuple
+        if self.is_correct_place(request.key):
+            print(f"Armazenando chave {request.key} no nó {self.id}")
+            self.stored_items[request.key_hash] = request.value
+        else:
+            print(f"Enviando a chave {request.key} para o nó {self.id_next}")
+            req = (
+                "StoreItem",
+                dht_pb2.Store(
+                        key = request.key,
+                        obj_size=len(request.value),
+                        value=request.value
+                ),
+                self.id_next
+            )
+            self.messages_queue.put(req)
+        
+        # enfileira a tupla de request criada
+        return dht_pb2.Void()
     
     def RetrieveItem(self, request, context):
         return super().RetrieveItem(request, context)
@@ -195,7 +219,7 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
         if id_hash_new < self_id_hash_int:
             return True
 
-        # sou o ultimo do anel e hash que quer entrar maior que eu? false
+        # hash do predecessor é maior que o meu e hash new é maior que predecessor? true
         if hash_id_prev > self_id_hash_int and id_hash_new > hash_id_prev:
             return True
 
@@ -244,8 +268,31 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
     def leave():
         pass
 
-    def store():
-        pass
+    def store(self, item: Item):
+        key_hash = hashlib.sha256(item.key.encode(encoding="utf-8")).hexdigest()
+
+        if self.is_correct_place(key_hash):
+            print(f"Armazenando chave {item.key} no nó {self.id}")
+            self.stored_items[key_hash] = item.value
+            print(f"chave {item.key} armazenada no nó {self.id}")
+        else:
+            try:
+                print(f"Enviando a chave {item.key} para o nó {self.id_next}")
+                req = (
+                    "StoreItem",
+                    dht_pb2.Store(
+                            key = key_hash,
+                            obj_size=len(item.value),
+                            value=item.value
+                    ),
+                    self.id_next
+                )
+                self.messages_queue.put(req)
+                print(f"chave {item.key} armazenada no nó {self.id_next}")
+                return
+            except:
+                print("Não foi possível armazenar o item")
+
     
     def retrieve():
         pass
@@ -258,13 +305,23 @@ def main(port_arg:int):
     server.add_insecure_port("[::]:" + port)
     server.start()
     print(f"ouvindo em {port}...")
-    server.wait_for_termination()
+
+    while True:
+        operation = input("O que você deseja fazer?\n")
+        if operation == "store":
+            key = input("Digite a chave: ")
+            valor = input("Digite o valor: ")
+            mockData = Item(key, valor)
+            manager.store(mockData)
+        
     
-    try:
-        server.wait_for_termination()  # Aguarda o servidor gRPC ser finalizado
-    finally:
-        manager.queue_thread.join()  # Espera o término da thread de fila
-        print("Servidor finalizado e fila de mensagens processada.")
+        server.wait_for_termination()
+
+    # try:
+    #     server.wait_for_termination()  # Aguarda o servidor gRPC ser finalizado
+    # finally:
+    #     manager.queue_thread.join()  # Espera o término da thread de fila
+    #     print("Servidor finalizado e fila de mensagens processada.")
 
 
 if __name__ == "__main__":
