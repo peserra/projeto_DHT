@@ -4,54 +4,112 @@ import dht_pb2
 import dht_pb2_grpc
 import hashlib
 from concurrent import futures
-import time
 import threading
 import traceback
-import os
 import sys
 import queue
 
 class Node(dht_pb2_grpc.DhtOperationsServicer):
     def __init__(self, port:int) -> None:
         self.ip_addr:str = "127.0.0.1"
-        self.porta:int   = port
+        self.port:int    = int(port)
         self.id:str      = f"{self.ip_addr}:{port}"
         self.id_hash:str = self.calc_hash_id(self.id)
         self.id_next:str = self.id 
         self.id_prev:str = self.id
         self.stored_items:dict = {}
         self.messages_queue = queue.Queue(maxsize=10)
-        self.join()  
+        # Iniciar thread para processar a fila
+        self.queue_thread = threading.Thread(target=self.process_message_queue, daemon=True)
+        self.queue_thread.start()
+        # node inicializa tentando entrar na dht
+        self.join()
+
+    # roda numa thread separada, para consumir a fila de mensagens gRPC
+    def process_message_queue(self):
+        print("Fila de mensagens inicializada.")
+        while True:
+            try:
+                # separa a tupla que foi enfileirada
+                method_name, request_msg_obj, target_node_id = self.messages_queue.get()
+                '''
+                    node processando esse request cria um stub para processar a chamada rpc especifica.
+                '''
+                with grpc.insecure_channel(target_node_id) as channel:
+                    stub = dht_pb2_grpc.DhtOperationsStub(channel)
+
+                    if method_name == "FindNext":
+                        print(f"processando {method_name} para {target_node_id}.")
+                        stub.FindNext(request_msg_obj)
+                    elif method_name == "SendJoiningPosition":
+                        print(f"processando {method_name} para {target_node_id}.")
+                        stub.SendJoiningPosition(request_msg_obj)
+                    elif method_name == "AdjustPredJoin":
+                        print(f"processando {method_name} para {target_node_id}.")
+                        stub.AdjustPredJoin(request_msg_obj)
+                    elif method_name == "AdjustNextLeave":
+                        print(f"processando {method_name} para {target_node_id}.")
+                        stub.AdjustNextLeave(request_msg_obj)
+                    elif method_name == "AdjustPredLeave":
+                        print(f"processando {method_name} para {target_node_id}.")
+                        stub.AdjustPredLeave(request_msg_obj)
+                    elif method_name == "StoreItem":
+                        print(f"processando {method_name} para {target_node_id}.")
+                        stub.StoreItem(request_msg_obj)
+                    elif method_name == "RetrieveItem":
+                        print(f"processando {method_name} para {target_node_id}.")
+                        stub.RetrieveItem(request_msg_obj)
+                    elif method_name == "SendItem":
+                        print(f"processando {method_name} para {target_node_id}.")
+                        stub.SendItem(request_msg_obj)
+                    elif method_name ==  "SendNotFound":
+                        print(f"processando {method_name} para {target_node_id}.")
+                        stub.SendNotFound(request_msg_obj)
+                    elif method_name == "TransferItems":
+                        print(f"processando {method_name} para {target_node_id}.")
+                        stub.TransferItems(request_msg_obj)
+                    else:
+                        print(f"Não existe metodo: {method_name} configurado no gRPC.")
+
+            except grpc.RpcError as g:
+                print(f"Erro na chamada gRPC: {g}")
+            except Exception as e:
+                print(f"Erro geral: {e}")  
 
     def FindNext(self, request, context) -> None:
-        if self.is_correct_place(request.id):
+        req:tuple
+        if self.is_correct_place(request.joining_node.id):
             prev_ip, prev_port = self.id_prev.split(':')
-            with grpc.insecure_channel(request.joining_node.id) as channel:
-                insertion_stub = dht_pb2_grpc.DhtOperationsStub(channel)
-                _ = insertion_stub.SendJoiningPosition(
-                    dht_pb2.JoinOk(
-                        next_node=dht_pb2.NodeInfo(
-                            id=self.id_hash,
-                            ip_addr=self.ip_addr, 
-                            port=self.port)
-                        ),
-                        prev_node = dht_pb2.NodeInfo(
-                            id = self.calc_hash_id(self.id_prev),
-                            ip_addr = prev_ip,
-                            port = prev_port
-                        )
-                )
+            req = (
+                "SendJoiningPosition",
+                dht_pb2.JoinOk(
+                    next_node=dht_pb2.NodeInfo(
+                        id=self.id_hash, 
+                        ip_addr=self.ip_addr, 
+                        port=self.port),
+                    prev_node=dht_pb2.NodeInfo(
+                        id = self.calc_hash_id(self.id_prev),
+                        ip_addr = prev_ip,
+                        port = int(prev_port)) 
+                ),
+                request.joining_node.id
+            )
         else:
-            with grpc.insecure_channel(self.id_next) as channel:
-                joining_stub = dht_pb2_grpc.DhtOperationsStub(channel)
-                _ = joining_stub.FindNext(
-                    dht_pb2.Join(
-                        joining_node=dht_pb2.NodeInfo(
-                            id = request.joining_node.id,
-                            ip_addr = request.joining_node.ip_addr, 
-                            port = request.joining_node.port)
-                        )
-                )
+
+            req = (
+                "FindNext",
+                dht_pb2.Join(
+                    joining_node=dht_pb2.NodeInfo(
+                        id = request.joining_node.id,
+                        ip_addr = request.joining_node.ip_addr, 
+                        port = request.joining_node.port)  
+                ),
+                self.id_next
+            )
+        
+        # enfileira a tupla de request criada
+        self.messages_queue.put(req)
+        return dht_pb2.Void()
 
     '''
         node que recebe isso:
@@ -59,6 +117,7 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
           * manda mensagem transfer, para receber os itens que vai tomar conta
     '''
     def SendJoiningPosition(self, request, context):
+        
         next_grpc = request.next_node
         prev_grpc = request.prev_node
 
@@ -68,21 +127,47 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
         print("recebi joinOK, meu proximo e anterior sao:")
         print(self.id_next)
         print(self.id_prev)
+
+
+        req_adj_pred = (
+            "AdjustPredJoin",
+            dht_pb2.NewNode(
+                joining_node=dht_pb2.NodeInfo(
+                    id = self.id,
+                    ip_addr = self.ip_addr,
+                    port = self.port
+                )
+            ),
+            self.id_prev
+        )
+        self.messages_queue.put(req_adj_pred)
+
+        # enfileira pedido de transfer
+        req_transfer = (
+            "TransferItems",
+            dht_pb2.Void(),
+            self.id_next,
+        )
+        self.messages_queue.put(req_transfer)
         
-        # manda transfer pra receber todos os arquivos que tem que tomar conta
-        with grpc.insecure_channel(self.id_next) as channel:
-
-         
-
 
     def AdjustPredJoin(self, request, context):
-        return super().AdjustPredJoin(request, context)
+        new_next_ip = request.joining_node.ip_addr
+        new_next_port = request.joining_node.port
+        self.id_prev = f"{new_next_ip}:{str(new_next_port)}"
+    
     
     def AdjustNextLeave(self, request, context):
-        return super().AdjustNextLeave(request, context)
+        new_pred_ip = request.leaving_node_pred.ip_addr
+        new_pred_port = request.leaving_node_pred.port 
+        self.id_prev = f"{new_pred_ip}:{str(new_pred_port)}"
+        # transfer
+
     
     def AdjustPredLeave(self, request, context):
-        return super().AdjustPredLeave(request, context)
+        new_next_ip = request.leaving_node_next.ip_addr
+        new_next_port = request.leaving_node_next.port 
+        self.id_prev = f"{new_next_ip}:{str(new_next_port)}"
     
     def StoreItem(self, request, context):
         return super().StoreItem(request, context)
@@ -96,20 +181,25 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
     def SendNotFound(self, request, context):
         return super().SendNotFound(request, context)
     
-    def calc_hash_id(id:str):
+    def calc_hash_id(self, id:str):
         return hashlib.sha256(id.encode(encoding="utf-8")).hexdigest()
     
     
-    def is_correct_place(self, id_hash_inc:str) -> bool:
+    def is_correct_place(self, id_hash_new:str) -> bool:
+        # converte para int base 16
+        id_hash_new = int(id_hash_new, 16)
+        self_id_hash_int = int(self.id_hash, 16)
+        hash_id_prev = int(self.calc_hash_id(self.id_prev), 16)
+
         # hash que quer entrar eh maior do que eu? false
-        if id_hash_inc > self.id_hash:
-            return False
+        if id_hash_new < self_id_hash_int:
+            return True
 
         # sou o ultimo do anel e hash que quer entrar maior que eu? false
-        if self.calc_hash_id(self.id_next) < self.id_hash and id_hash_inc > self.id_hash:
-            return False
+        if hash_id_prev > self_id_hash_int and id_hash_new > hash_id_prev:
+            return True
 
-        return True
+        return False
 
 
     def is_responsible_for_key(self, key_hash: str) -> bool:
@@ -123,28 +213,33 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
             return key_hash > self.id_hash or key_hash <= self.id_next
         return False
     
+       
     def join(self):
         known_hosts_path = "lista_nodes.txt"
         with open(known_hosts_path, 'r+') as hosts:
-            if os.path.getsize(known_hosts_path) == 0:
-                hosts.write(self.id)
+            known_hosts_list = hosts.readlines()
+            if not known_hosts_list:
+                hosts.write(f"{self.id}\n")
             else:
-                known_hosts_list = hosts.readlines()
-                for h in known_hosts_list:
+                # known_hosts_list = hosts.readlines()
+                for host_id in known_hosts_list:
                     try:
-                        with grpc.insecure_channel(h) as channel:
-                            joining_stub = dht_pb2_grpc.DhtOperationsStub(channel)
-                            _ = joining_stub.FindNext(dht_pb2.Join(
+                        req = (
+                            "FindNext",
+                            dht_pb2.Join(
                                 joining_node=dht_pb2.NodeInfo(
-                                    id=self.id_hash,
-                                    ip_addr=self.ip_addr, 
-                                    port=self.port)
-                                )
-                            )
-                            return
-                    except:
+                                    id = self.id_hash,
+                                    ip_addr = self.ip_addr, 
+                                    port = self.port)  
+                            ),
+                            host_id
+                        )
+                        self.messages_queue.put(req)
+                        return
+                    
+                    except Exception as e:
+                        print(f"Não foi possivel se conectar a {host_id}")
                         continue
-        pass
 
     def leave():
         pass
@@ -164,11 +259,15 @@ def main(port_arg:int):
     server.start()
     print(f"ouvindo em {port}...")
     server.wait_for_termination()
+    
+    try:
+        server.wait_for_termination()  # Aguarda o servidor gRPC ser finalizado
+    finally:
+        manager.queue_thread.join()  # Espera o término da thread de fila
+        print("Servidor finalizado e fila de mensagens processada.")
 
 
 if __name__ == "__main__":
     port_arg = int(sys.argv[1])
-    s_thread = threading.Thread(target=main, args=(port_arg,))
-    s_thread.start()
+    main(port_arg)
     
-    s_thread.join()
