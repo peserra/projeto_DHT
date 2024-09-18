@@ -53,20 +53,20 @@ message NodeInfo {
 // enviada pelo node que quer ingressar
 message Join {
     NodeInfo joining_node = 1;
-    string description = 2;
+    string remetente = 2;
 }
 
 // enviada PARA o node que quer ingressar
 message JoinOk {
     NodeInfo next_node = 1; // node que esta enviando esta mensagem
     NodeInfo prev_node = 2; // atual predecessor deste node
-    string description = 3;
+    string remetente = 3;
 }
 
 // enviada ao predecessor do node ingressante, apos receber o join_ok, para que este atualize seu sucessor
 message NewNode {
     NodeInfo joining_node = 1;
-    string description = 2;
+    string remetente = 2;
 }
 
 // ##################################  LEAVING  ###############################################
@@ -74,13 +74,13 @@ message NewNode {
 // enviada por um node para seu sucessor, quando ele deseja sair da DHT
 message Leave {
     NodeInfo leaving_node_pred = 1;
-    string description = 2;
+    string remetente = 2;
 }
 
 // enviada pelo node saindo ao seu predecessor, para que ele ajuste seu sucessor 
 message NodeGone {
     NodeInfo leaving_node_next = 1;
-    string description = 2;
+    string remetente = 2;
 }
 
 // ################################### FUNCTIONALITIES #############################################
@@ -89,13 +89,13 @@ message Store {
     string key = 1;
     uint32 obj_size = 2;
     bytes value = 3;
-    string description = 4;
+    string remetente = 4;
 }
 
 message Retrieve {
     string key = 1;
     NodeInfo searching_node = 2;
-    string description = 3;
+    string remetente = 3;
 }
 
 // resposta enviada pelo retrieve no node responsavel
@@ -103,7 +103,7 @@ message Ok {
     string key = 1;
     uint32 obj_size = 2;
     bytes value = 3;
-    string description = 4;
+    string remetente = 4;
 }
 
 message NotFound {}
@@ -111,5 +111,5 @@ message NotFound {}
 message Transfer {
     string key = 1;
     bytes value = 2;
-    string description = 3;
+    string remetente = 3;
 }

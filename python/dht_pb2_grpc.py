@@ -86,7 +86,7 @@ class DhtOperationsStub(object):
                 _registered_method=True)
         self.TransferItems = channel.unary_stream(
                 '/DhtOperations/TransferItems',
-                request_serializer=dht__pb2.Void.SerializeToString,
+                request_serializer=dht__pb2.NodeInfo.SerializeToString,
                 response_deserializer=dht__pb2.Transfer.FromString,
                 _registered_method=True)
 
@@ -217,7 +217,7 @@ def add_DhtOperationsServicer_to_server(servicer, server):
             ),
             'TransferItems': grpc.unary_stream_rpc_method_handler(
                     servicer.TransferItems,
-                    request_deserializer=dht__pb2.Void.FromString,
+                    request_deserializer=dht__pb2.NodeInfo.FromString,
                     response_serializer=dht__pb2.Transfer.SerializeToString,
             ),
     }
@@ -489,7 +489,7 @@ class DhtOperations(object):
             request,
             target,
             '/DhtOperations/TransferItems',
-            dht__pb2.Void.SerializeToString,
+            dht__pb2.NodeInfo.SerializeToString,
             dht__pb2.Transfer.FromString,
             options,
             channel_credentials,

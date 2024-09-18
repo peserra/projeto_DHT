@@ -88,7 +88,7 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
                         id = self.calc_hash_id(self.id_prev),
                         ip_addr = prev_ip,
                         port = int(prev_port)),
-                    description= f"{self.id}: Mandei JoinOK para {request.joining_node.id} pois sou o sucessor correto dele" 
+                    remetente= self.id 
                 ),
                 f"{request.joining_node.ip_addr}:{request.joining_node.port}"
             )
@@ -101,11 +101,10 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
                         id = request.joining_node.id,
                         ip_addr = request.joining_node.ip_addr, 
                         port = request.joining_node.port),
-                        description= f"{self.id}: Mandei FindNext para {self.id_next} pois nao sou o lugar certo para o request"  
+                        remetente= self.id 
                 ),
                 self.id_next
             )
-        print (req[1].description)
         # enfileira a tupla de request criada
         self.messages_queue.put(req)
         return dht_pb2.Void()
@@ -133,11 +132,10 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
                     ip_addr = self.ip_addr,
                     port = self.port
                 ),
-                description= f"{self.id}: mandando AdjustPredJoin para {self.id_prev} corrigir o sucessor dele"
+                remetente= self.id
             ),
             self.id_prev
         )
-        print(req_adj_pred[1].description)
         self.messages_queue.put(req_adj_pred)
 
         print(f"{self.id}: Solicitando transferencia de {self.id_next}")
@@ -199,7 +197,7 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
                     yield dht_pb2.Transfer(
                         key= k,
                         value = v.encode("utf-8"), # encoda a string para bytes
-                        description= ""
+                        remetente= self.id
                     )
     
     def StoreItem(self, request:dht_pb2.Store, context) -> None:
@@ -233,6 +231,7 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
         return super().SendNotFound(request, context)
     
     def calc_hash_id(self, id:str):
+        #hash correto: hashlib.sha256(id.encode(encoding="utf-8")).hexdigest()
         ip , port = id.split(":")
         return port
     
@@ -243,11 +242,11 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
         self_id_hash_int = int(self.id_hash, 16)
         hash_id_prev = int(self.calc_hash_id(self.id_prev), 16)
         
-        # hash que quer entrar eh maior do que eu? false
+        # hash que quer entrar eh menor do que meu hash?
         if id_hash_new < self_id_hash_int:
             return True
 
-        # sou o ultimo do anel e hash que quer entrar maior que eu? false
+        # sou o primeiro do anel e hash que quer entrar maior que meu anterior? 
         if hash_id_prev >= self_id_hash_int and id_hash_new > hash_id_prev:
             return True
 
@@ -285,7 +284,7 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
                                     ip_addr = self.ip_addr, 
                                     port = self.port
                                     ),
-                                    description= f"Mensagem Join de join() que saiu de {self.id} para {host_id}"  
+                                    remetente= self.id
                             ),
                             host_id
                         )
@@ -295,8 +294,48 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
                     except Exception as e:
                         print(f"Não foi possivel se conectar a {host_id}")
                         continue
+    
+    '''
+    Ao final disso, os ponteiros dos vizinhos devem ter sido atualizados
+    (AdjustNextLeave e AdjustPredLeave) e os itens do no que esta saindo
+    devem ser transferidos para o sucessor (sucessor deve mandar Transfer
+    para node que esta saindo)
+    '''
+    def leave(self):
+        ip_addr_prev, port_prev = self.id_prev.split(":")
+        ip_addr_next, port_next = self.id_next.split(":")
 
-    def leave():
+        # node que chamou funcao leave manda mensagem para seu next, com dados do seu prev
+        req_leave_next = (
+            "AdjustNextLeave",
+            dht_pb2.Leave(
+                leaving_node_pred= dht_pb2.NodeInfo(
+                    id = self.calc_hash(self.id_prev),
+                    ip_addr = ip_addr_prev,
+                    port= int(port_prev)
+                ),
+                remetente=self.id
+            ),
+            self.id_next
+        )
+
+        self.messages_queue.put(req_leave_next)
+
+        # node que chamou funcao leave manda mensagem para seu prev, com dados do seu next
+        req_leave_prev = (
+            "AdjustPredLeave",
+            dht_pb2.Leave(
+                leaving_node_pred= dht_pb2.NodeInfo(
+                    id = self.calc_hash(self.id_next),
+                    ip_addr = ip_addr_next,
+                    port= int(port_next)
+                ),
+                remetente=self.id
+            ),
+            self.id_prev
+        )
+
+        self.messages_queue.put(req_leave_prev)
         pass
 
     def store(self, item: Item):
@@ -314,7 +353,8 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
                     dht_pb2.Store(
                             key = key_hash,
                             obj_size=len(item.value),
-                            value=item.value
+                            value=item.value,
+                            remetente=self.id
                     ),
                     self.id_next
                 )
