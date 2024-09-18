@@ -14,7 +14,7 @@ import os
 class Item:
     # vai servir pra passar key : value pairs
     key:str
-    value:str
+    value:bytes
 
 class Node(dht_pb2_grpc.DhtOperationsServicer):
     def __init__(self, port:int) -> None:
@@ -149,7 +149,7 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
 
         # fim de uma operação Join, escreve no arquivo de nodes conhecidos
         with open("lista_nodes.txt", 'a') as hosts:
-            hosts.write(self.id)
+            hosts.write(f"{self.id}\n")
         
         return dht_pb2.Void()
         
@@ -209,8 +209,10 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
     def StoreItem(self, request:dht_pb2.Store, context) -> None:
         req:tuple
         if self.is_correct_place(request.key):
+            print(f"Guardando o item {request.key} no nó {self.id}")
             self.stored_items[request.key_hash] = request.value
         else:
+            print(f"Enviando item {request.key} para o nó {self.id_next}")
             req = (
                 "StoreItem",
                 dht_pb2.Store(
@@ -225,8 +227,39 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
         # enfileira a tupla de request criada
         return dht_pb2.Void()
     
-    def RetrieveItem(self, request, context):
-        return super().RetrieveItem(request, context)
+    def RetrieveItem(self, request: dht_pb2.Retrieve, context):
+        if self.is_correct_place(request.key):
+            if request.key in self.stored_items.keys:
+                print(f"Item {request.key} encontrado, enviando para o nó pedinte!")
+                self.SendItem(
+                            dht_pb2.Ok(
+                                key = request.key,
+                                obj_size=len(self.stored_items[request.key]),
+                                value = self.stored_items[request.key],
+                                remetente=self.id
+                                ),
+                            )
+            else:
+                print(f"Item {request.key} não encontrado!")
+                self.SendNotFound()
+        else:
+            print(f"O item {request.key} não é meu, enviando solictação para o nó {self.id_next}")
+            req = (
+                "RetrieveItem",
+                dht_pb2.Retrieve(
+                        key = request.key,
+                        searching_node=dht_pb2.NodeInfo(
+                            id=request.searching_node.id, 
+                            ip_addr=self.searching_node.ip_addr, 
+                            port=self.searching_node.port),
+                        remetente=self.id
+                ),
+                self.id_next
+            )
+            self.messages_queue.put(req)
+        
+        # enfileira a tupla de request criada
+        return dht_pb2.Void()
     
     def SendItem(self, request, context):
         return super().SendItem(request, context)
@@ -341,11 +374,15 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
         pass
 
     def store(self, item: Item):
-        key_hash = hashlib.sha256(item.key.encode(encoding="utf-8")).hexdigest()
+        key_hash = self.calc_hash_id(item.key)
+        # key_hash = hashlib.sha256(item.key.encode(encoding="utf-8")).hexdigest()
 
         if self.is_correct_place(key_hash):
+        # if False: # testing
+            print(f"Guardando o item {item.key} no nó {self.id}")
             self.stored_items[key_hash] = item.value
         else:
+            print(f"Enviando item {item.key} para o nó {self.id_next}")
             try:
                 req = (
                     "StoreItem",
@@ -356,6 +393,7 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
                             remetente=self.id
                     ),
                     self.id_next
+                    # "127.0.0.1:3002" #testing
                 )
                 self.messages_queue.put(req)
                 return
@@ -363,8 +401,34 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
                 print("\n nao foi possivel armazenar o item")
 
     
-    def retrieve():
-        pass
+    def retrieve(self, key: str):
+        key_hash = self.calc_hash_id(key)
+        # key_hash = hashlib.sha256(key.encode(encoding="utf-8")).hexdigest()
+
+        if self.is_correct_place(key_hash):
+        # if False: #testing
+            print(f"Item {key} encontrado, Aqui está o conteúdo do arquivo:")
+            print(self.stored_items[key_hash])
+        else:
+            print(f"Enviando a chave {key} para o nó {self.id_next}")
+            try:
+                req = (
+                    "RetrieveItem",
+                    dht_pb2.Retrieve(
+                            key = key,
+                            searching_node=dht_pb2.NodeInfo(
+                                id=self.id, 
+                                ip_addr=self.ip_addr, 
+                                port=self.port),
+                            remetente=self.id
+                    ),
+                    self.id_next
+                    # "127.0.0.1:3002" # testing
+                )
+                self.messages_queue.put(req)
+                return
+            except:
+                print("\n nao foi possivel procurar o item")
 
 def abre_server(port_arg:int):
     port = str(port_arg)
@@ -403,8 +467,8 @@ def main():
             node.join()
         elif action == "store":
             key = input("Digite a chave: ")
-            value = input("Digite o valor: ")
-            node.store(key, value)
+            value = bytes(input("Digite o valor: ").encode("utf-8"))
+            node.store(Item(key, value))
         elif action == "retrieve":
             key = input("Digite a chave: ")
             node.retrieve(key)
