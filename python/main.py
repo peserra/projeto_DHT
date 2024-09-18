@@ -124,11 +124,11 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
 
         print(f"{self.id}: recebi joinOK, novo anterior = {self.id_prev} novo proximo = {self.id_next}")
 
-        req_adj_pred = (
+        req_adj_prev = (
             "AdjustPredJoin",
             dht_pb2.NewNode(
                 joining_node=dht_pb2.NodeInfo(
-                    id = self.id,
+                    id = self.id_hash,
                     ip_addr = self.ip_addr,
                     port = self.port
                 ),
@@ -136,7 +136,7 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
             ),
             self.id_prev
         )
-        self.messages_queue.put(req_adj_pred)
+        self.messages_queue.put(req_adj_prev)
 
         print(f"{self.id}: Solicitando transferencia de {self.id_next}")
         # enfileira pedido de transfer,
@@ -171,9 +171,23 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
    
     # node que recebe deve ajustar seu predecessor quando um node sai da dht
     def AdjustNextLeave(self, request, context):
-        new_pred_ip = request.leaving_node_pred.ip_addr
-        new_pred_port = request.leaving_node_pred.port 
-        self.id_prev = f"{new_pred_ip}:{str(new_pred_port)}"
+        new_prev_ip = request.leaving_node_pred.ip_addr
+        new_prev_port = request.leaving_node_pred.port 
+        self.id_prev = f"{new_prev_ip}:{str(new_prev_port)}"
+        print(f"{self.id}: Ajustei meu prev após {request.remetente} sair da dht.")
+
+        # tenho que mandar transfer para remetente me mandar os itens que ele guarda
+        req_transfer = (
+            "TransferItems",
+            dht_pb2.NodeInfo(
+                id=self.id_hash,
+                ip_addr= self.ip_addr,
+                port = self.port
+            ),
+            request.remetente
+        )
+        self.messages_queue.put(req_transfer)
+
         return dht_pb2.Void()
 
     # node que recebe deve ajustar seu sucessor, quando um node sai da dht
@@ -181,13 +195,15 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
         new_next_ip = request.leaving_node_next.ip_addr
         new_next_port = request.leaving_node_next.port 
         self.id_next = f"{new_next_ip}:{str(new_next_port)}"
+        print(f"{self.id}: Ajustei meu next após {request.remetente} sair da dht.")
         return dht_pb2.Void()
     
     def TransferItems(self, request, context):
-        print(f"{self.id}: Enviando arquivos que nao tomo mais conta para {self.id_prev}")
+        requester_id = f"{request.ip_addr}:{request.port}"
+        print(f"{self.id}: Enviando arquivos que nao tomo mais conta para {requester_id}")
         
         if not self.stored_items.values():
-            print("Nao tenho nenhum item armazenado")
+            print("Nao tenho nenhum item armazenado.")
         else:
             # supondo que k seja a string de um hash e v uma string
             for k, v in self.stored_items.values():
@@ -310,7 +326,7 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
             "AdjustNextLeave",
             dht_pb2.Leave(
                 leaving_node_pred= dht_pb2.NodeInfo(
-                    id = self.calc_hash(self.id_prev),
+                    id = self.calc_hash_id(self.id_prev),
                     ip_addr = ip_addr_prev,
                     port= int(port_prev)
                 ),
@@ -324,9 +340,9 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
         # node que chamou funcao leave manda mensagem para seu prev, com dados do seu next
         req_leave_prev = (
             "AdjustPredLeave",
-            dht_pb2.Leave(
-                leaving_node_pred= dht_pb2.NodeInfo(
-                    id = self.calc_hash(self.id_next),
+            dht_pb2.NodeGone(
+                leaving_node_next= dht_pb2.NodeInfo(
+                    id = self.calc_hash_id(self.id_next),
                     ip_addr = ip_addr_next,
                     port= int(port_next)
                 ),

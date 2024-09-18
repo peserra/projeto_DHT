@@ -43,10 +43,13 @@ service DhtOperations {
 message Void {}
 
 message NodeInfo {
-    string id = 1; // id de um node eh o hash de IP:PORT
+    string id = 1; // id de um node eh o hash da string "ip_addr:port"
     string ip_addr = 2;
     uint32 port = 3;
 }
+
+// OBS: 
+//Campo 'remetente'é string "ip_addr:port" do node que enviou aquela mensagem
 
 //  ################################ JOINING  ###################################################
 

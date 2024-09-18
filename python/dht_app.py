@@ -26,6 +26,11 @@ class DHTClient:
         self.channel = grpc.insecure_channel(address)
         self.stub = dht_pb2_grpc.DhtOperationsStub(self.channel)
     
+    # calcular o hash, que e o id que vai nas chamadas grpc
+    def calc_hash_id(self, id:str):
+        #hash correto: hashlib.sha256(id.encode(encoding="utf-8")).hexdigest()
+        ip , port = id.split(":") # só um placeholder
+        return port
     '''
     Como solicitado no enunciado, o join é responsável por inserir um nó na DHT.
     No request ele cria uma mensagem do tipo Join com as informações do nó que deseja ingressar
@@ -35,10 +40,11 @@ class DHTClient:
     def join(self, ip_addr: str, port: int):
         request = dht_pb2.Join(
             joining_node=dht_pb2.NodeInfo(
-                id=f"{ip_addr}:{port}",
+                id=self.calc_hash_id(f"{ip_addr}:{port}"), # isso aqui é o HASH desse node
                 ip_addr=ip_addr,
                 port=port
-            )
+            ),
+            
         )
         response = self.stub.FindNext(request)
         print("Resposta do Join:", response)
