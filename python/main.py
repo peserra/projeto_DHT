@@ -337,22 +337,11 @@ def main(port_arg:int):
     server.start()
     print(f"ouvindo em {port}...")
 
-    while True:
-        operation = input("O que você deseja fazer?\n")
-        if operation == "store":
-            key = input("Digite a chave: ")
-            valor = input("Digite o valor: ")
-            mockData = Item(key, valor)
-            manager.store(mockData)
-        
-    
-        server.wait_for_termination()
-
-    # try:
-    #     server.wait_for_termination()  # Aguarda o servidor gRPC ser finalizado
-    # finally:
-    #     manager.queue_thread.join()  # Espera o término da thread de fila
-    #     print("Servidor finalizado e fila de mensagens processada.")
+    try:
+        server.wait_for_termination()  # Aguarda o servidor gRPC ser finalizado
+    finally:
+        manager.queue_thread.join()  # Espera o término da thread de fila
+        print("Servidor finalizado e fila de mensagens processada.")
 
 
 if __name__ == "__main__":
