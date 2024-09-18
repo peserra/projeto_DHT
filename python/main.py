@@ -36,54 +36,45 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
         print("Fila de mensagens inicializada.")
         while True:
             try:
-                # separa a tupla que foi enfileirada
                 method_name, request_msg_obj, target_node_id = self.messages_queue.get()
-                '''
-                    node processando esse request cria um stub para processar a chamada rpc especifica.
-                '''
+                # node processando esse request cria um stub para a chamada rpc especifica.
                 with grpc.insecure_channel(target_node_id) as channel:
                     stub = dht_pb2_grpc.DhtOperationsStub(channel)
-
                     if method_name == "FindNext":
-                        print(f"processando {method_name} para {target_node_id}.")
                         stub.FindNext(request_msg_obj)
                     elif method_name == "SendJoiningPosition":
-                        print(f"processando {method_name} para {target_node_id}.")
                         stub.SendJoiningPosition(request_msg_obj)
                     elif method_name == "AdjustPredJoin":
-                        print(f"processando {method_name} para {target_node_id}.")
                         stub.AdjustPredJoin(request_msg_obj)
                     elif method_name == "AdjustNextLeave":
-                        print(f"processando {method_name} para {target_node_id}.")
                         stub.AdjustNextLeave(request_msg_obj)
                     elif method_name == "AdjustPredLeave":
-                        print(f"processando {method_name} para {target_node_id}.")
                         stub.AdjustPredLeave(request_msg_obj)
                     elif method_name == "StoreItem":
-                        print(f"processando {method_name} para {target_node_id}.")
                         stub.StoreItem(request_msg_obj)
                     elif method_name == "RetrieveItem":
-                        print(f"processando {method_name} para {target_node_id}.")
                         stub.RetrieveItem(request_msg_obj)
                     elif method_name == "SendItem":
-                        print(f"processando {method_name} para {target_node_id}.")
                         stub.SendItem(request_msg_obj)
                     elif method_name ==  "SendNotFound":
-                        print(f"processando {method_name} para {target_node_id}.")
                         stub.SendNotFound(request_msg_obj)
                     elif method_name == "TransferItems":
-                        print(f"processando {method_name} para {target_node_id}.")
                         stub.TransferItems(request_msg_obj)
                     else:
                         print(f"Não existe metodo: {method_name} configurado no gRPC.")
-
+                    
+                    print("Esperando nova chamada...")
             except grpc.RpcError as g:
                 print(f"Erro na chamada gRPC: {g}")
             except Exception as e:
-                print(f"Erro geral: {e}")  
+                print(f"Erro geral: {e}")
+            
+
+            
 
     def FindNext(self, request, context) -> None:
         req:tuple
+        # verifica se esta no lugar certo de inserir, baseado no hash
         if self.is_correct_place(request.joining_node.id):
             prev_ip, prev_port = self.id_prev.split(':')
             req = (
@@ -96,9 +87,10 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
                     prev_node=dht_pb2.NodeInfo(
                         id = self.calc_hash_id(self.id_prev),
                         ip_addr = prev_ip,
-                        port = int(prev_port)) 
+                        port = int(prev_port)),
+                    description= f"{self.id}: Mandei JoinOK para {request.joining_node.id} pois sou o sucessor correto dele" 
                 ),
-                request.joining_node.id
+                f"{request.joining_node.ip_addr}:{request.joining_node.port}"
             )
         else:
 
@@ -108,11 +100,12 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
                     joining_node=dht_pb2.NodeInfo(
                         id = request.joining_node.id,
                         ip_addr = request.joining_node.ip_addr, 
-                        port = request.joining_node.port)  
+                        port = request.joining_node.port),
+                        description= f"{self.id}: Mandei FindNext para {self.id_next} pois nao sou o lugar certo para o request"  
                 ),
                 self.id_next
             )
-        
+        print (req[1].description)
         # enfileira a tupla de request criada
         self.messages_queue.put(req)
         return dht_pb2.Void()
@@ -130,10 +123,7 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
         self.id_next = f"{next_grpc.ip_addr}:{str(next_grpc.port)}"
         self.id_prev = f"{prev_grpc.ip_addr}:{str(prev_grpc.port)}"
 
-        print("recebi joinOK, meu proximo e anterior sao:")
-        print(self.id_next)
-        print(self.id_prev)
-
+        print(f"{self.id}: recebi joinOK, novo anterior = {self.id_prev} novo proximo = {self.id_next}")
 
         req_adj_pred = (
             "AdjustPredJoin",
@@ -142,38 +132,75 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
                     id = self.id,
                     ip_addr = self.ip_addr,
                     port = self.port
-                )
+                ),
+                description= f"{self.id}: mandando AdjustPredJoin para {self.id_prev} corrigir o sucessor dele"
             ),
             self.id_prev
         )
+        print(req_adj_pred[1].description)
         self.messages_queue.put(req_adj_pred)
 
-        # enfileira pedido de transfer
+        print(f"{self.id}: Solicitando transferencia de {self.id_next}")
+        # enfileira pedido de transfer,
+        # node que quer receber os itens manda a mensagem para seu next 
         req_transfer = (
             "TransferItems",
-            dht_pb2.Void(),
+            dht_pb2.NodeInfo(
+                id=self.id_hash,
+                ip_addr= self.ip_addr,
+                port = self.port
+            ),
             self.id_next,
         )
         self.messages_queue.put(req_transfer)
+
+        # fim de uma operação Join, escreve no arquivo de nodes conhecidos
+        with open("lista_nodes.txt", 'a') as hosts:
+            hosts.write(self.id)
+            print(f"{self.id}: Escrevi meu id no arquivo.")
+        
+        return dht_pb2.Void()
         
 
+    # node que recebe ajusta seu next quando um node entra na dht
     def AdjustPredJoin(self, request, context):
         new_next_ip = request.joining_node.ip_addr
         new_next_port = request.joining_node.port
-        self.id_prev = f"{new_next_ip}:{str(new_next_port)}"
-    
-    
+        self.id_next = f"{new_next_ip}:{str(new_next_port)}"
+        print(f"{self.id}: Ajustei meu next para {self.id_next}")
+        return dht_pb2.Void()
+        
+   
+    # node que recebe deve ajustar seu predecessor quando um node sai da dht
     def AdjustNextLeave(self, request, context):
         new_pred_ip = request.leaving_node_pred.ip_addr
         new_pred_port = request.leaving_node_pred.port 
         self.id_prev = f"{new_pred_ip}:{str(new_pred_port)}"
-        # transfer
+        return dht_pb2.Void()
 
-    
+    # node que recebe deve ajustar seu sucessor, quando um node sai da dht
     def AdjustPredLeave(self, request, context):
         new_next_ip = request.leaving_node_next.ip_addr
         new_next_port = request.leaving_node_next.port 
-        self.id_prev = f"{new_next_ip}:{str(new_next_port)}"
+        self.id_next = f"{new_next_ip}:{str(new_next_port)}"
+        return dht_pb2.Void()
+    
+    def TransferItems(self, request, context):
+        print(f"{self.id}: Enviando arquivos que nao tomo mais conta para {self.id_prev}")
+        
+        if not self.stored_items.values():
+            print("Nao tenho nenhum item armazenado")
+        else:
+            # supondo que k seja a string de um hash e v uma string
+            for k, v in self.stored_items.values():
+                if int(k, 16) >  int(request.id, 16):
+                    continue
+                else:
+                    yield dht_pb2.Transfer(
+                        key= k,
+                        value = v.encode("utf-8"), # encoda a string para bytes
+                        description= ""
+                    )
     
     def StoreItem(self, request:dht_pb2.Store, context) -> None:
         req:tuple
@@ -206,7 +233,8 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
         return super().SendNotFound(request, context)
     
     def calc_hash_id(self, id:str):
-        return hashlib.sha256(id.encode(encoding="utf-8")).hexdigest()
+        ip , port = id.split(":")
+        return port
     
     
     def is_correct_place(self, id_hash_new:str) -> bool:
@@ -214,16 +242,16 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
         id_hash_new = int(id_hash_new, 16)
         self_id_hash_int = int(self.id_hash, 16)
         hash_id_prev = int(self.calc_hash_id(self.id_prev), 16)
-
+        
         # hash que quer entrar eh maior do que eu? false
         if id_hash_new < self_id_hash_int:
             return True
 
-        # hash do predecessor é maior que o meu e hash new é maior que predecessor? true
-        if hash_id_prev > self_id_hash_int and id_hash_new > hash_id_prev:
+        # sou o ultimo do anel e hash que quer entrar maior que eu? false
+        if hash_id_prev >= self_id_hash_int and id_hash_new > hash_id_prev:
             return True
 
-        return False
+        return False  
 
 
     def is_responsible_for_key(self, key_hash: str) -> bool:
@@ -248,13 +276,16 @@ class Node(dht_pb2_grpc.DhtOperationsServicer):
                 # known_hosts_list = hosts.readlines()
                 for host_id in known_hosts_list:
                     try:
+                        print(f"CHAMANDO FIND NEXT NO JOIN {self.id}")
                         req = (
                             "FindNext",
                             dht_pb2.Join(
                                 joining_node=dht_pb2.NodeInfo(
                                     id = self.id_hash,
                                     ip_addr = self.ip_addr, 
-                                    port = self.port)  
+                                    port = self.port
+                                    ),
+                                    description= f"Mensagem Join de join() que saiu de {self.id} para {host_id}"  
                             ),
                             host_id
                         )
