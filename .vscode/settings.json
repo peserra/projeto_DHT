@@ -1,0 +1,6 @@
+{
+  "python.analysis.extraPaths": [
+    "./python/dht_pb2_",
+    "./python/dht_pb2_"
+  ]
+}
